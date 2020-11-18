@@ -8,6 +8,8 @@ import threading
 print_lock = threading.Lock()
 
 def proccessData(data):
+    #data processing will take place in this function
+
     commandNum = 3
     commands = data.split(" ")
     

@@ -1,7 +1,16 @@
 # Import socket module
 import socket
 
-def sendMessage(s,message):
+
+# local host IP '127.0.0.1'
+# host = '25.48.108.244'
+host = '127.0.0.1'
+
+# Define the port on which you want to connect
+port = 9999
+
+def send_message(s,message):
+
     # message sent to server
     s.send(message.encode('ascii'))
 
@@ -10,26 +19,17 @@ def sendMessage(s,message):
 
     return data
 
-
-def Main():
-    # local host IP '127.0.0.1'
-    # host = '25.48.108.244'
-    host = '127.0.0.1'
-
-    # Define the port on which you want to connect
-    port = 9999
+def connect_and_send_message(message):
 
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
     # connect to server on local computer
     s.connect((host,port))
 
-    # message you send to server
-    message = "SERA1 TEMP 44"
     attempt = 0
     while True:
 
-        reply = sendMessage(s,message)
+        reply = send_message(s,message)
 
         string_reply = str(reply.decode('ascii'))
 
@@ -40,11 +40,19 @@ def Main():
             break
         elif attempt < 3 :
             attempt += 1
+            print('Error: Connection will close.')
             continue
         else:
             break
+        
     # close the connection
     s.close()
+
+def Main():
+    
+    for i in range(4):
+        message = 'SERA1 INFO 4' + str(i)
+        connect_and_send_message(message)
 
 if __name__ == '__main__':
     Main()
