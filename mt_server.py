@@ -1,3 +1,8 @@
+#import firebase libraries
+from google.cloud import firestore
+import firebase_admin
+from firebase_admin import credentials
+
 # import socket programming library
 import socket
 
@@ -5,18 +10,55 @@ import socket
 from _thread import *
 import threading
 
-print_lock = threading.Lock()
+import os,sys
 
-def proccessData(data):
-    #data processing will take place in this function
 
+working_directory = os.path.dirname(sys.argv[0])
+os.chdir(working_directory)
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=working_directory+"\green-house_admin.json"
+
+# initialize sdk
+cred = credentials.Certificate("green-house_admin.json")
+firebase_admin.initialize_app(cred)
+
+# initialize firestore instance
+db = firestore.Client()
+
+def read_and_set_firebase(sera_id,current_temp):
+    message = "TEMP "
+
+    #Check if there is a heating request
+    sera_dict = db.collection(u'GreenHouses').document(u'sera{}'.format(sera_id)).get().to_dict()
+
+    #set sera's new temp
+    sera_dict['current_temp'] = current_temp
+    db.collection(u'GreenHouses').document(u'sera{}'.format(sera_id)).set(sera_dict)
+
+    if sera_dict['current_temp'] != sera_dict['target_temp']:
+        message += str(sera_dict['target_temp'])
+    else:
+        message +="OK"
+
+    return message
+
+def proccess_request(data):
+    #processing request will take place in this function
+    #Example command: Sera1 TEMP 14
     commandNum = 3
     commands = data.split(" ")
     
     if len(commands) == commandNum :
-        return 'ACK'
+
+        sera_id= commands[0][-1]
+        current_temp = commands[2]
+
+        message = read_and_set_firebase(sera_id,current_temp)
+        #put_to_firebase(sera_id,current_temp)
+
+        return 'ACK,'+message
     else:
-        return 'Command size must be {}'.format(commandNum)
+        return 'ERROR,Command size must be {}'.format(commandNum)
 
 # thread fuction
 def threaded(c):
@@ -34,7 +76,9 @@ def threaded(c):
         string_data = str(data.decode('ascii'))
 
         print('Recieved message: '+string_data )
-        reply = proccessData(string_data)
+        reply = proccess_request(string_data)
+
+        print(reply)
 
         # send reply to client
         c.send(reply.encode('ascii'))
@@ -42,6 +86,7 @@ def threaded(c):
     # connection closed
     c.close()
 
+print_lock = threading.Lock()
 
 def Main():
    # host = '25.48.108.244'

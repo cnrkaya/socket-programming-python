@@ -35,14 +35,24 @@ def connect_and_send_message(message):
 
         # print the received message
         print('Received from the server :',string_reply)
+        
+         #Example reply :ACK,TEMP 16
+        replies = string_reply.split(",") 
+        print("Connection: " + replies[0])
+        if replies[0] == 'ACK' :
 
-        if string_reply == 'ACK' :
+            target_temp  =replies[1].split(" ")[1]   #OK or target temp
+            if  target_temp == "OK":
+                print("No need to heat")
+            else:
+                print("Heat until " + target_temp+" C is reached")
             break
-        elif attempt < 3 :
+        elif attempt < 2 :
             attempt += 1
-            print('Error: Connection will close.')
+            print('Error{}'.format(attempt))
             continue
         else:
+            print('3 Attempt failed,the connection will close')
             break
         
     # close the connection
@@ -50,8 +60,8 @@ def connect_and_send_message(message):
 
 def Main():
     
-    for i in range(4):
-        message = 'SERA1 INFO 4' + str(i)
+    for i in range(1,2):
+        message = 'SERA{} TEMP 16'.format(i)
         connect_and_send_message(message)
 
 if __name__ == '__main__':
