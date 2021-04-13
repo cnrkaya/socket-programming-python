@@ -6,12 +6,17 @@ from firebase_admin import credentials
 # import socket programming library
 import socket
 
+from datetime import datetime
+
 # import thread module
 from _thread import *
 import threading
 
 import os,sys
 
+TOTAL_SERA_COUNT = 3
+
+greenhouse_ids ={'1':'A2fl3iSXzQwpn4rTP2xS', '2':'HdZDreip0NwRcjX2aV8I', '3':'fdPcntEn4VDYDolqdA6b'}
 
 working_directory = os.path.dirname(sys.argv[0])
 os.chdir(working_directory)
@@ -25,18 +30,28 @@ firebase_admin.initialize_app(cred)
 # initialize firestore instance
 db = firestore.Client()
 
-def read_and_set_firebase(sera_id,current_temp):
+def clear_firestore_logs():
+    for i in range(1,TOTAL_SERA_COUNT+1):
+        db.collection(u'Logs').document('sera{}logs'.format(i)).set({})
+    print('All Firebase logs have been cleaned')
+
+def read_and_set_firebase(sera_id,currenttemp):
     message = "TEMP "
 
     #Check if there is a heating request
-    sera_dict = db.collection(u'GreenHouses').document(u'sera{}'.format(sera_id)).get().to_dict()
+    sera_dict = db.collection(u'GreenHouses').document(greenhouse_ids[str(sera_id)]).get().to_dict()
 
     #set sera's new temp
-    sera_dict['current_temp'] = current_temp
-    db.collection(u'GreenHouses').document(u'sera{}'.format(sera_id)).set(sera_dict)
+    sera_dict['currenttemp'] = currenttemp
+    db.collection(u'GreenHouses').document(greenhouse_ids[str(sera_id)]).set(sera_dict)
 
-    if sera_dict['current_temp'] != sera_dict['target_temp']:
-        message += str(sera_dict['target_temp'])
+    #add log
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    db.collection(u'Logs').document('sera{}logs'.format(sera_id)).set({dt_string:currenttemp},merge=True)
+
+    if sera_dict['currenttemp'] != sera_dict['targettemp']:
+        message += str(sera_dict['targettemp'])
     else:
         message +="OK"
 
@@ -51,10 +66,10 @@ def proccess_request(data):
     if len(commands) == commandNum :
 
         sera_id= commands[0][-1]
-        current_temp = commands[2]
+        currenttemp = commands[2]
 
-        message = read_and_set_firebase(sera_id,current_temp)
-        #put_to_firebase(sera_id,current_temp)
+        message = read_and_set_firebase(sera_id,currenttemp)
+        #put_to_firebase(sera_id,currenttemp)
 
         return 'ACK,'+message
     else:
@@ -94,6 +109,10 @@ def Main():
     # reverse a port on your computer
     # in our case it is 12345 but it
     # can be anything
+
+    clear_firestore_logs()
+
+
     port = 9999
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
